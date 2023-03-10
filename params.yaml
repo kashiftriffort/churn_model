@@ -1,0 +1,2 @@
+external_data_config:
+  external_data_csv: data/external/train.csv

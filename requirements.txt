@@ -2,9 +2,14 @@
 -e .
 
 # external requirements
-click
-Sphinx
-coverage
-awscli
 flake8
-python-dotenv>=0.5.1
+cookiecutter
+dvc
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+joblib
+flask
+pyyaml
