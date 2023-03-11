@@ -15,3 +15,13 @@ stages:
     outs:
     - data/processed/churn_train.csv
     - data/processed/churn_test.csv
+
+  model_train:
+    cmd: python src/models/train_model.py --config=params.yaml
+    deps:
+    - data/processed/churn_train.csv
+    - data/processed/churn_test.csv
+    - src/models/train_model.py
+    params:
+    - random_forest.max_depth
+    - random_forest.n_estimators
