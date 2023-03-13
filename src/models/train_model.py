@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 from urllib.parse import urlparse
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score,recall_score,accuracy_score,precision_score,confusion_matrix,classification_report
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import f1_score,accuracy_score,precision_score,confusion_matrix,classification_report
 
 def read_params(config_path):
     """
@@ -19,29 +20,24 @@ def read_params(config_path):
         config = yaml.safe_load(yaml_file)
     return config
 
-def accuracymeasures(y_test,predictions,avg_method):
+def accuracymeasures(y_test, predictions):
     accuracy = accuracy_score(y_test, predictions)
-    precision = precision_score(y_test, predictions, average=avg_method)
-    recall = recall_score(y_test, predictions, average=avg_method)
-    f1score = f1_score(y_test, predictions, average=avg_method)
-    target_names = ['0','1']
+
     print("Classification report")
     print("---------------------","\n")
-    print(classification_report(y_test, predictions,target_names=target_names),"\n")
+    print(classification_report(y_test, predictions),"\n")
+
     print("Confusion Matrix")
     print("---------------------","\n")
     print(confusion_matrix(y_test, predictions),"\n")
 
     print("Accuracy Measures")
     print("---------------------","\n")
+    
     print("Accuracy: ", accuracy)
-    print("Precision: ", precision)
-    print("Recall: ", recall)
-    print("F1 Score: ", f1score)
+    return accuracy
 
-    return accuracy,precision,recall,f1score
-
-def get_feat_and_target(df,target):
+def get_feat_and_target(df, target):
     """
     Get features and target variables seperately from given dataframe and target 
     input: dataframe and target column
@@ -61,8 +57,12 @@ def train_and_evaluate(config_path):
 
     train = pd.read_csv(train_data_path, sep=",")
     test = pd.read_csv(test_data_path, sep=",")
-    train_x,train_y=get_feat_and_target(train,target)
-    test_x,test_y=get_feat_and_target(test,target)
+    X_train, y_train = get_feat_and_target(train, target)
+    X_test, y_test = get_feat_and_target(test, target)
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
 ################### MLFLOW ###############################
     mlflow_config = config["mlflow_config"]
@@ -73,18 +73,14 @@ def train_and_evaluate(config_path):
 
     with mlflow.start_run(run_name=mlflow_config["run_name"]) as mlops_run:
         model = RandomForestClassifier(max_depth=max_depth,n_estimators=n_estimators)
-        model.fit(train_x, train_y)
-        y_pred = model.predict(test_x)
-        accuracy,precision,recall,f1score = accuracymeasures(test_y,y_pred,'weighted')
+        model.fit(X_train, y_train.values.ravel())
+        y_pred = model.predict(X_test)
+        accuracy = accuracymeasures(y_test, y_pred)
 
         mlflow.log_param("max_depth",max_depth)
         mlflow.log_param("n_estimators", n_estimators)
-
         mlflow.log_metric("accuracy", accuracy)
-        mlflow.log_metric("precision", precision)
-        mlflow.log_metric("recall", recall)
-        mlflow.log_metric("f1_score", f1score)
-       
+
         tracking_url_type_store = urlparse(mlflow.get_artifact_uri()).scheme
 
         if tracking_url_type_store != "file":

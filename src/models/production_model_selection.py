@@ -13,28 +13,23 @@ def log_production_model(config_path):
     remote_server_uri = mlflow_config["remote_server_uri"]
 
     mlflow.set_tracking_uri(remote_server_uri)
-
-    all_experiments = [exp.experiment_id for exp in mlflow.search_experiments()]
-    print(all_experiments)
-
-    runs = mlflow.search_runs(mlflow_config["experiment_name"])
-    max_accuracy = max(runs["metrics.accuracy"])
-    max_accuracy_run_id = list(runs[runs["metrics_accuracy"] == max_accuracy]["run_id"])[0]
+    runs = mlflow.get_experiment(experiment_id=1)
+    sample = mlflow.search_runs(experiment_ids=runs.experiment_id)
+    
+    max_accuracy = max(sample["metrics.accuracy"])
+    max_accuracy_run_id = list(sample[sample["metrics.accuracy"] == max_accuracy]["run_id"])[0]
+    print(max_accuracy_run_id)
 
     client = MlflowClient()
     for mv in client.search_model_versions(f"name='{model_name}'"):
         mv = dict(mv)
-
-        if mv["run_id"] == max_accuracy_run_id:
-            current_version = mv["version"]
-            logged_model = mv["source"]
-            pprint(mv, indent=4)
-            client.transition_model_version_stage(name=model_name, version=current_version, stage="Production")
-        else:
-            current_version = mv["version"]
-            client.transition_model_version_stage(name=model_name, version=current_version, stage="Stagging")
+        current_version = mv["version"]
+        logged_model = mv["source"]
+        pprint(mv, indent=4)
+        client.transition_model_version_stage(name=model_name, version=current_version, stage="Production")
 
         loaded_model = mlflow.pyfunc.load_model(logged_model)
+        print(loaded_model)
         joblib.dump(loaded_model, model_dir)
 
 if __name__=="__main__":

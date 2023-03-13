@@ -13,5 +13,4 @@ scikit-learn
 joblib
 flask
 pyyaml
-mlflow
-protobuf==3.20
+mlflow==1.27.0
